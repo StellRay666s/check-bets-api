@@ -1,0 +1,29 @@
+body {
+    background: url("../image/bg.png");
+    background-size: cover;
+    min-width: 100%;
+    min-height: 100vh;
+    background-repeat: no-repeat;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+.title {
+    background-color: rgba(0, 0, 0, 0.4);
+    text-align: center;
+    padding: 7px;
+    color: white;
+    font-size: 20px;
+    max-width: 700px;
+    width: 90%;
+    min-width: 300px;
+    font-family: "Inter";
+}
+
+.link {
+    filter: blur(0);
+    color: #dcb773;
+}
