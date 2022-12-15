@@ -1,9 +1,14 @@
+const usersControllers = require("../controllers/user.controller");
 module.exports = (app) => {
   const usersControllers = require("../controllers/user.controller");
 
   var router = require("express").Router();
 
   router.post("/registration", usersControllers.registration);
+
+  // Регистрация и вход с телефона
+  router.post("/registration-phone", usersControllers.registrationPhone);
+  router.post("/check-sms", usersControllers.checkSms);
 
   router.post("/login", usersControllers.login);
 
