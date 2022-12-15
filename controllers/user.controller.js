@@ -15,17 +15,16 @@ exports.registration = async (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
     if (!email || !password) {
-      res.status(400).send({
+      return res.status(400).send({
         message: "Поля не должны быть пустыми",
       });
     }
 
     const checkUser = await Users.findOne({ where: { email } });
     if (checkUser) {
-      res.status(400).send({
+      return res.status(400).send({
         message: "Адресс электронной почты уже используется",
       });
-      return false;
     }
 
     const role = await Roles.findOne({ where: { name: "Пользователь" } });
@@ -39,7 +38,7 @@ exports.registration = async (req, res) => {
       hash: tokenEmail,
     });
     await user.addRoles(role);
-    return res.json({ message: "Регистрация прошла успешно." });
+    return res.send({ message: "Регистрация прошла успешно." });
   } catch (err) {
     res.status(400).send({
       message: "Ошибка при регистрации",
@@ -74,7 +73,7 @@ exports.login = async (req, res) => {
 
   if (passwordEqual) {
     const payload = { email: checkUser.email, id: checkUser.id };
-    const token = jwt.sign(payload, "secret", { expiresIn: 86400 });
+    const token = jwt.sign(payload, "secret", { expiresIn: 86200 });
     res.send({ checkUser, token });
   } else {
     res.status(400).send({ message: "Неправильный пароль", err });
@@ -133,12 +132,14 @@ exports.addRoleUser = async (req, res) => {
 
 exports.changeProfilDAta = async (req, res) => {
   try {
-    const token = req.headers.authorization.replace("Bearer", "").trimStart();
+    const token = req.headers.authorization;
     if (!token) {
-      res.status(401).send("Неавторизован");
+      return res.status(401).send({ message: "Неавторизован" });
     }
-    const user = jwt.verify(token, "secret");
-    Users.update(
+    const replaceToken = token.replace("Bearer", "").trimStart();
+
+    const user = jwt.decode(replaceToken, "secret");
+    const updateData = await Users.update(
       {
         name: req.body.name,
         lastname: req.body.lastname,
@@ -147,10 +148,17 @@ exports.changeProfilDAta = async (req, res) => {
       },
       { where: { email: user.email } }
     );
-
-    res.send({ message: "Данные успешно обновлены" });
+    if (updateData) {
+      const newUser = await Users.findOne({ where: { email: req.body.email } });
+      const payload = { email: newUser.email, id: newUser.id };
+      const updateToken = jwt.sign(payload, "secret", { expiresIn: 86400 });
+      return res.send({
+        message: "Данные успешно обновлены",
+        updateToken: updateToken,
+      });
+    }
   } catch (err) {
-    res.send(err);
+    return res.send(err);
   }
 };
 
@@ -161,17 +169,21 @@ exports.getMe = async (req, res) => {
       return res.status(401).json({ message: "Не авторизован!" });
     }
 
+    if (!jwt.verify(token, "secret")) {
+      return res.send({ message: "Токен не действителен" });
+    }
+
     const decoded = jwt.decode(token, "secret");
     if (decoded) {
       const user = await Users.findOne({
         where: { id: decoded.id },
         raw: true,
       });
-      return res.json({
+      return res.send({
         name: user.name,
         lastname: user.lastname,
-        phone: user.phone,
         email: user.email,
+        phone: user.phone,
       });
     }
   } catch (err) {
