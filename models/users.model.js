@@ -9,15 +9,16 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.STRING,
     },
     phone: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.STRING,
     },
     email: {
       type: Sequelize.STRING,
-      allowNull: false,
+      // Мы заходим через телефон нам тут нужен null
+      // allowNull: false,
     },
     password: {
       type: Sequelize.STRING,
-      allowNull: false,
+      // allowNull: false,
     },
     verifiedEmail: {
       type: Sequelize.BOOLEAN,
