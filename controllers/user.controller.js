@@ -133,37 +133,38 @@ exports.checkSms = async (req, res) => {
     }
 };
 
+
 exports.login = async (req, res) => {
-    const email = req.body.email;
-    const password = req.body.password;
-    if (!email || !password) {
-        return res.status(400).send({
-            message: "Поля не должны быть пустыми",
-        });
-    }
+  const email = req.body.email;
+  const password = req.body.password;
+  if (!email || !password) {
+    return res.status(400).send({
+      message: "Поля не должны быть пустыми",
+    });
+  }
 
-    const checkUser = await Users.findOne({where: {email: email}, raw: true});
+  const checkUser = await Users.findOne({ where: { email: email }, raw: true });
 
-    if (!checkUser) {
-        return res.status(400).send({message: "Пользователя не существует"});
-    }
+  if (!checkUser) {
+    return res.status(400).send({ message: "Пользователя не существует" });
+  }
 
-    if (!checkUser.verifiedEmail) {
-        return res.status(400).send({
-            message:
-                "Для авторизации необходимо подтвердить адрес электронной почты",
-        });
-    }
+  if (!checkUser.verifiedEmail) {
+    return res.status(400).send({
+      message:
+        "Для авторизации необходимо подтвердить адресс электронной почты",
+    });
+  }
 
-    const passwordEqual = await bcrypt.compare(password, checkUser.password);
+  const passwordEqual = await bcrypt.compare(password, checkUser.password);
 
-    if (passwordEqual) {
-        const payload = {email: checkUser.email, id: checkUser.id};
-        const token = jwt.sign(payload, "secret", {expiresIn: 86400});
-        res.send({checkUser, token});
-    } else {
-        res.status(400).send({message: "Неправильный пароль", err});
-    }
+  if (passwordEqual) {
+    const payload = { email: checkUser.email, id: checkUser.id };
+    const token = jwt.sign(payload, "secret", { expiresIn: 86200 });
+    res.send({ checkUser, token });
+  } else {
+    res.status(400).send({ message: "Неправильный пароль", err });
+  }
 };
 
 exports.verifyEmail = async (req, res) => {
@@ -218,51 +219,80 @@ exports.addRoleUser = async (req, res) => {
 };
 
 exports.changeProfilDAta = async (req, res) => {
-    try {
-        const token = req.headers.authorization.replace("Bearer", "").trimStart();
-        if (!token) {
-            res.status(401).send("Неавторизован");
-        }
-        const user = jwt.verify(token, "secret");
-        Users.update(
-            {
-                name: req.body.name,
-                lastname: req.body.lastname,
-                phone: req.body.phone,
-                email: req.body.email,
-            },
-            {where: {email: user.email}}
-        );
-
-        res.send({message: "Данные успешно обновлены"});
-    } catch (err) {
-        res.send(err);
+  try {
+    const token = req.headers.authorization;
+    if (!token) {
+      return res.status(401).send({ message: "Неавторизован" });
     }
+    const replaceToken = token.replace("Bearer", "").trimStart();
+
+    const user = jwt.decode(replaceToken, "secret");
+    console.log(user);
+
+    if (user.email === req.body.email) {
+      await Users.update(
+        {
+          name: req.body.name,
+          lastname: req.body.lastname,
+          phone: req.body.phone,
+        },
+        { where: { id: user.id } }
+      );
+      return res.send({ message: "Данные изменены без email." });
+    } else {
+      await Users.update(
+        {
+          name: req.body.name,
+          lastname: req.body.lastname,
+          phone: req.body.phone,
+          email: req.body.email,
+          verifidEmail: false,
+        },
+        { where: { id: user.id } }
+      );
+
+      const newUser = await Users.findOne({
+        where: { id: user.id },
+      });
+      const payload = { email: newUser.email, id: newUser.id };
+      const updateToken = jwt.sign(payload, "secret", { expiresIn: 86400 });
+      return res.send({
+        message: "Данные успешно обновлены",
+        updateToken: updateToken,
+      });
+    }
+  } catch (err) {
+    return res.send(err);
+  }
 };
 
 exports.getMe = async (req, res) => {
-    try {
-        const token = req.headers.authorization.replace("Bearer", "").trimStart();
-        if (!token) {
-            return res.status(401).json({message: "Не авторизован!"});
-        }
-
-        const decoded = jwt.decode(token, "secret");
-        if (decoded) {
-            const user = await Users.findOne({
-                where: {id: decoded.id},
-                raw: true,
-            });
-            return res.json({
-                name: user.name,
-                lastname: user.lastname,
-                phone: user.phone,
-                email: user.email,
-            });
-        }
-    } catch (err) {
-        res.json({message: err});
+  try {
+    const token = req.headers.authorization.replace("Bearer", "").trimStart();
+    if (!token) {
+      return res.status(401).json({ message: "Не авторизован!" });
     }
+
+    if (!jwt.verify(token, "secret")) {
+      return res.send({ message: "Токен не действителен" });
+    }
+
+    const decoded = jwt.decode(token, "secret");
+    if (decoded) {
+      const user = await Users.findOne({
+        where: { id: decoded.id },
+        raw: true,
+      });
+      return res.send({
+        name: user.name,
+        lastname: user.lastname,
+        email: user.email,
+        phone: user.phone,
+      });
+    }
+  } catch (err) {
+    res.json({ message: err });
+  }
 };
 
 exports.getMatch = async (req, res) => {

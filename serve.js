@@ -6,7 +6,7 @@ const path = require("path");
 const multer = require("multer");
 const formData = require("express-form-data");
 var corsOptions = {
-    origin: "http://localhost:3000",
+  origin: "https://check-bets.online",
 };
 
 const app = express();
