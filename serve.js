@@ -5,7 +5,7 @@ const db = require("./models");
 const path = require("path");
 const multer = require("multer");
 var corsOptions = {
-  origin: "http://localhost:3000",
+  origin: "https://check-bets.online",
 };
 
 const app = express();

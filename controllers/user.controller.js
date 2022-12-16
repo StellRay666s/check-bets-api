@@ -139,17 +139,33 @@ exports.changeProfilDAta = async (req, res) => {
     const replaceToken = token.replace("Bearer", "").trimStart();
 
     const user = jwt.decode(replaceToken, "secret");
-    const updateData = await Users.update(
-      {
-        name: req.body.name,
-        lastname: req.body.lastname,
-        phone: req.body.phone,
-        email: req.body.email,
-      },
-      { where: { email: user.email } }
-    );
-    if (updateData) {
-      const newUser = await Users.findOne({ where: { email: req.body.email } });
+    console.log(user);
+
+    if (user.email === req.body.email) {
+      await Users.update(
+        {
+          name: req.body.name,
+          lastname: req.body.lastname,
+          phone: req.body.phone,
+        },
+        { where: { id: user.id } }
+      );
+      return res.send({ message: "Данные изменены без email." });
+    } else {
+      await Users.update(
+        {
+          name: req.body.name,
+          lastname: req.body.lastname,
+          phone: req.body.phone,
+          email: req.body.email,
+          verifidEmail: false,
+        },
+        { where: { id: user.id } }
+      );
+
+      const newUser = await Users.findOne({
+        where: { id: user.id },
+      });
       const payload = { email: newUser.email, id: newUser.id };
       const updateToken = jwt.sign(payload, "secret", { expiresIn: 86400 });
       return res.send({
