@@ -19,7 +19,6 @@ db.UserRoles = require("./userRoles.model.js")(sequelize, Sequelize);
 db.Smscode = require("./smscode.model.js")(sequelize, Sequelize);
 db.SmscodeUser = require("./smscodeUser.model.js")(sequelize, Sequelize);
 
-
 db.Users.belongsToMany(db.Roles, { through: db.UserRoles });
 db.Roles.belongsToMany(db.Users, { through: db.UserRoles });
 

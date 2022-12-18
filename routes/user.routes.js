@@ -24,6 +24,8 @@ module.exports = (app) => {
 
   router.get("/getMatch", usersControllers.getMatch);
 
+  router.get("/getUsers", usersControllers.getUsers);
+
   // router.get("/changePassword", usersControllers.changePassword);
   app.use("/", router);
 };
