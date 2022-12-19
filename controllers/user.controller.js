@@ -2,6 +2,8 @@ const db = require("../models");
 const Users = db.Users;
 const Roles = db.Roles;
 const UserRoles = db.UserRoles;
+const Tariffs = db.Tariffs;
+const userTariffs = db.userTariffs;
 const Smscode = db.Smscode;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -10,6 +12,8 @@ const { main, smsCodeSend } = require("../utils/mailer");
 const { mainChancgePassword } = require("../utils/mailChangePassword");
 const crypto = require("crypto");
 const axios = require("axios");
+const { sequelize } = require("../models");
+const { where } = require("sequelize");
 const saltRounds = 12;
 
 exports.registration = async (req, res) => {
@@ -30,7 +34,8 @@ exports.registration = async (req, res) => {
       return false;
     }
 
-    const role = await Roles.findOne({ where: { name: "USER" } });
+    const role = await Roles.findOne({ where: { name: "Пользователь" } });
+    const tariffs = await Tariffs.findOne({ where: { name: "Базовый" } });
 
     const tokenEmail = crypto.randomBytes(64).toString("hex");
     await main(email, tokenEmail);
@@ -40,7 +45,22 @@ exports.registration = async (req, res) => {
       password: passwordHash,
       hash: tokenEmail,
     });
-    await user.addRoles(role);
+
+    if (user) {
+      Users.update(
+        {
+          tariffs: sequelize.fn(
+            "array_append",
+            sequelize.col("tariffs"),
+            tariffs.name
+          ),
+        },
+        { where: { email: email } }
+      );
+
+      await user.addRoles(role);
+    }
+
     return res.json({ message: "Регистрация прошла успешно." });
   } catch (err) {
     res.status(400).send({
@@ -160,21 +180,32 @@ exports.login = async (req, res) => {
   if (passwordEqual) {
     const payload = { email: checkUser.email, id: checkUser.id };
     const token = jwt.sign(payload, "secret", { expiresIn: 86200 });
-    res.send({ checkUser, token });
+    res.send({
+      user: {
+        name: checkUser.name,
+        lastname: checkUser.lastname,
+        email: checkUser.email,
+        phone: checkUser.phone,
+        tariffs: checkUser.tariffs,
+      },
+      token,
+    });
   } else {
     res.status(400).send({ message: "Неправильный пароль" });
   }
 };
 
 exports.getUsers = async (req, res) => {
-  const token = req.headers.authorization;
+  const token = req.headers.authorization.replace("Bearer", "").trimStart();
   if (!token) {
     return res.status(401).send({ message: "Неавторизован" });
   }
-  const user = jwt.decode(token.replace("Bearer", "").trimStart(), "secret");
-  const userRole = await UserRoles.findOne({ where: { UserId: user.id } });
+  const user = jwt.decode(token, "secret");
+  const userRole = await UserRoles.findAll({ where: { UserId: user.id } });
 
-  if (userRole.RoleId != 2) {
+  // res.send(userRole.filter(item => item.RoleId ===2));
+
+  if (!userRole.filter((item) => item.RoleId === 2)) {
     return res.status(400).send({ message: "У вас нету соответсвующих прав!" });
   }
 
@@ -183,6 +214,23 @@ exports.getUsers = async (req, res) => {
   });
 
   return res.send(usersList);
+};
+
+exports.getUser = async (req, res) => {
+  const token = req.headers.authorization;
+  const id = req.query.id;
+  const decode = jwt.decode(token.replace("Bearer", "").trimStart(), "secret");
+  const roleId = await UserRoles.findAll({ where: { UserId: decode.id } });
+
+  if (!roleId.filter((item) => item.RoleId === 2)) {
+    return res.status(400).send({ message: "У вас нету соответсвующих прав!" });
+  }
+
+  const findUser = await Users.findOne(
+    { attributes: ["id", "name", "lastname", "phone", "email", "tariffs"] },
+    { where: { id: id } }
+  );
+  return res.send(findUser);
 };
 
 exports.verifyEmail = async (req, res) => {
@@ -231,7 +279,43 @@ exports.addRoleUser = async (req, res) => {
     if (!findRole) {
       return res.json({ message: "Роль не найдена!" });
     }
-    return user.addRoles(findRole);
+    await user.addRoles(findRole);
+
+    return res.send({ message: "Роль добавлена" });
+  } catch (err) {}
+};
+
+exports.addTariffsInTable = async (req, res) => {
+  try {
+    const tariff = req.body.tariff;
+    const price = req.body.price;
+    const findTariff = await Tariffs.findOne({ where: { name: tariff } });
+    if (findTariff) {
+      return res.status(400).json({ message: "Такойя тариф уже существует!" });
+    }
+    await Tariffs.create({ name: tariff, price: price });
+    return res.json({ message: "Тариф успешно добавлен" });
+  } catch (err) {
+    return res.json({ message: "Ошибка при добавлении тарифа" });
+  }
+};
+
+exports.addTarifsUser = async (req, res) => {
+  try {
+    const email = req.body.email;
+    const tariffs = req.body.tariffs;
+
+    const user = await Users.findOne({ where: { email: email } });
+    if (!user) {
+      return res.json({ message: "Пользователь не найден" });
+    }
+    const findTariff = await Tariffs.findOne({ where: { name: tariffs } });
+    if (!findTariff) {
+      return res.json({ message: "Тариф не найден!" });
+    }
+    await user.addTariffs(findTariff);
+
+    return res.send({ message: "Тариф добавлен" });
   } catch (err) {}
 };
 
@@ -300,11 +384,19 @@ exports.getMe = async (req, res) => {
         where: { id: decoded.id },
         raw: true,
       });
+
+      const tariffs = await userTariffs.findOne({
+        where: { UserId: decoded.id },
+      });
+
       return res.send({
-        name: user.name,
-        lastname: user.lastname,
-        email: user.email,
-        phone: user.phone,
+        user: {
+          name: user.name,
+          lastname: user.lastname,
+          email: user.email,
+          phone: user.phone,
+          tariffs: tariffs.TariffId,
+        },
       });
     }
   } catch (err) {
@@ -336,4 +428,29 @@ exports.getMatch = async (req, res) => {
     });
 };
 
-exports.buyTariffs = async (req, res) => {};
+exports.buyTariffs = async (req, res) => {
+  const token = req.headers.authorization;
+  const decode = jwt.decode(token.replace("Bearer", "").trimStart());
+  if (!token) {
+    return res.send({ message: "Неавторизован" });
+  }
+  const tariffs = await Tariffs.findOne({
+    where: { name: req.body.tariffs },
+  });
+
+  if (!tariffs) {
+    return res.send({ message: "Тариф не найден" });
+  }
+
+  await Users.update(
+    {
+      tariffs: sequelize.fn(
+        "array_append",
+        sequelize.col("tariffs"),
+        tariffs.name
+      ),
+    },
+    { where: { id: decode.id } }
+  );
+  return res.send({ message: "Тариф приобретен" });
+};

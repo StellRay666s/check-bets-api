@@ -14,9 +14,15 @@ module.exports = (app) => {
 
   router.get("/getMe", usersControllers.getMe);
 
+  router.get("/getUser/:id", usersControllers.getUser);
+
   router.get("/emailVerify", usersControllers.verifyEmail);
 
   router.post("/addRoleUser", usersControllers.addRoleUser);
+
+  router.post("/addTarifsTable", usersControllers.addTariffsInTable);
+
+  router.post("/addTarifsUser", usersControllers.addTarifsUser);
 
   router.post("/addRoleInTable", usersControllers.addRoleInTable);
 
@@ -25,6 +31,8 @@ module.exports = (app) => {
   router.get("/getMatch", usersControllers.getMatch);
 
   router.get("/getUsers", usersControllers.getUsers);
+
+  router.post("/buyTariffs", usersControllers.buyTariffs);
 
   // router.get("/changePassword", usersControllers.changePassword);
   app.use("/", router);

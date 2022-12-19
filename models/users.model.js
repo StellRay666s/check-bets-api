@@ -25,7 +25,7 @@ module.exports = (sequelize, Sequelize) => {
       defaultValue: false,
     },
     tariffs: {
-      type: Sequelize.ARRAY(DataTypes.INTEGER),
+      type: Sequelize.ARRAY(DataTypes.STRING),
     },
     hash: {
       type: Sequelize.STRING,
