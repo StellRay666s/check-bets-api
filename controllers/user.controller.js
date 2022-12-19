@@ -219,6 +219,7 @@ exports.getUsers = async (req, res) => {
 exports.getUser = async (req, res) => {
   const token = req.headers.authorization;
   const id = req.query.id;
+
   const decode = jwt.decode(token.replace("Bearer", "").trimStart(), "secret");
   const roleId = await UserRoles.findAll({ where: { UserId: decode.id } });
 
@@ -227,9 +228,13 @@ exports.getUser = async (req, res) => {
   }
 
   const findUser = await Users.findOne(
-    { attributes: ["id", "name", "lastname", "phone", "email", "tariffs"] },
-    { where: { id: id } }
+    {
+      attributes: ["id", "name", "lastname", "phone", "email", "tariffs"],
+      where: { id: id },
+    }
+    // { where: { id: id } }
   );
+
   return res.send(findUser);
 };
 
@@ -426,6 +431,34 @@ exports.getMatch = async (req, res) => {
     .then((res) => {
       console.log(res);
     });
+};
+
+exports.saveChangeOnAdmin = async (req, res) => {
+  try {
+    const token = req.headers.authorization;
+    const userId = req.body.id;
+    if (!token) {
+      return res.send({ message: "Не авторизован" });
+    }
+    const decode = jwt.decode(
+      token.replace("Bearer", "").trimStart(),
+      "secret"
+    );
+
+    const roleId = await UserRoles.findAll({ where: { UserId: decode.id } });
+    if (!roleId.filter((item) => item.RoleId === 2)) {
+      return res
+        .status(400)
+        .send({ message: "У вас нету соответсвующих прав!" });
+    }
+
+    const user = Users.update(
+      { where: { id: userId } },
+      { name: req.body.name, lastname: req.body.lastname }
+    );
+  } catch (err) {
+    res.send("Ошибка");
+  }
 };
 
 exports.buyTariffs = async (req, res) => {

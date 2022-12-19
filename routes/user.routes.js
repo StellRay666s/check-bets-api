@@ -14,7 +14,7 @@ module.exports = (app) => {
 
   router.get("/getMe", usersControllers.getMe);
 
-  router.get("/getUser/:id", usersControllers.getUser);
+  router.get("/getUser", usersControllers.getUser);
 
   router.get("/emailVerify", usersControllers.verifyEmail);
 
