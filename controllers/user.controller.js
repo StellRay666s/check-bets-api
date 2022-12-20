@@ -196,11 +196,11 @@ exports.login = async (req, res) => {
 };
 
 exports.getUsers = async (req, res) => {
-  const token = req.headers.authorization.replace("Bearer", "").trimStart();
+  const token = req.headers.authorization;
   if (!token) {
     return res.status(401).send({ message: "Неавторизован" });
   }
-  const user = jwt.decode(token, "secret");
+  const user = jwt.decode(token.replace("Bearer", "").trimStart(), "secret");
   const userRole = await UserRoles.findAll({ where: { UserId: user.id } });
 
   // res.send(userRole.filter(item => item.RoleId ===2));
@@ -387,22 +387,14 @@ exports.getMe = async (req, res) => {
     if (decoded) {
       const user = await Users.findOne({
         where: { id: decoded.id },
-        raw: true,
+        attributes: ["id", "name", "lastname", "phone", "email", "tariffs"],
       });
 
       const tariffs = await userTariffs.findOne({
         where: { UserId: decoded.id },
       });
 
-      return res.send({
-        user: {
-          name: user.name,
-          lastname: user.lastname,
-          email: user.email,
-          phone: user.phone,
-          tariffs: tariffs.TariffId,
-        },
-      });
+      return res.send(user);
     }
   } catch (err) {
     res.json({ message: err });
@@ -468,7 +460,7 @@ exports.buyTariffs = async (req, res) => {
     return res.send({ message: "Неавторизован" });
   }
   const tariffs = await Tariffs.findOne({
-    where: { name: req.body.tariffs },
+    where: { name: "Премиум" },
   });
 
   if (!tariffs) {
@@ -486,4 +478,33 @@ exports.buyTariffs = async (req, res) => {
     { where: { id: decode.id } }
   );
   return res.send({ message: "Тариф приобретен" });
+};
+
+exports.changePassword = async (req, res) => {
+  const newPassword = req.body.newPassword;
+  const currentPassword = req.body.currentPassword;
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).send({ message: "Неавторизован" });
+  }
+
+  const decode = jwt.decode(token.replace("Bearer", "").trimStart());
+  const user = await Users.findOne({ where: { id: decode.id } });
+
+  const verifyPassword = await bcrypt.compare(currentPassword, user.password);
+
+  if (!verifyPassword) {
+    return res.status(403).send({ message: "Неверный пароль" });
+  }
+
+  const hashPassword = await bcrypt.hash(newPassword, saltRounds);
+
+  await Users.update(
+    {
+      password: hashPassword,
+    },
+    { where: { id: user.id } }
+  );
+
+  return res.send({ message: "Пароль успешно обновлен" });
 };

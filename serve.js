@@ -5,14 +5,12 @@ const db = require("./models");
 const path = require("path");
 const multer = require("multer");
 const formData = require("express-form-data");
-var corsOptions = {
-  origin: "http://localhost:3000",
-};
+var corsOptions = {};
 
 const app = express();
 
 // Без формдаты никуда ))
-app.use(formData.parse());
+// app.use(formData.parse());
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -25,6 +23,7 @@ app.set("view engine", "ejs");
 
 require("./routes/user.routes.js")(app);
 require("./routes/news.routes.js")(app);
+app.use("/upload", express.static("uploads"));
 
 const storage = multer.diskStorage({
   destination: (_, __, cb) => {
@@ -36,10 +35,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-app.use("/upload", express.static("uploads"));
 app.post("/upload", upload.single("image"), (req, res) => {
   res.json({
-    url: `/uploads/${req.file.originalname}`,
+    url: `/upload/${req.file.originalname}`,
   });
 });
 

@@ -34,6 +34,8 @@ module.exports = (app) => {
 
   router.post("/buyTariffs", usersControllers.buyTariffs);
 
+  router.patch("/changePassword", usersControllers.changePassword);
+
   // router.get("/changePassword", usersControllers.changePassword);
   app.use("/", router);
 };
