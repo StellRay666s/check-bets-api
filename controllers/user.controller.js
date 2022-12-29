@@ -3,23 +3,34 @@ const Users = db.Users;
 const Roles = db.Roles;
 const UserRoles = db.UserRoles;
 const Tariffs = db.Tariffs;
+const Leags = db.Leags;
+const MatchLeag = db.MatchLeag;
+const MatchLeagHockey = db.MatchHockey;
+const PrevMatches = db.PrevMatches;
+const StatsHome = db.StatsHome;
+const StatsAway = db.StatsAway;
+const StatsHomeHockey = db.StatsHomeHockey;
+const PrewMatchHockey = db.PrevMatchHockey;
+const StatsAwayHockey = db.StatsAwayHockey;
 const userTariffs = db.userTariffs;
 const Smscode = db.Smscode;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+var FormData = require("form-data");
+var data = new FormData();
 
 const { main, smsCodeSend } = require("../utils/mailer");
 const { mainChancgePassword } = require("../utils/mailChangePassword");
 const crypto = require("crypto");
 const axios = require("axios");
-const { sequelize } = require("../models");
-const { where } = require("sequelize");
+
 const saltRounds = 12;
 
 exports.registration = async (req, res) => {
   try {
     const email = req.body.email;
     const password = req.body.password;
+
     if (!email || !password) {
       res.status(400).send({
         message: "Поля не должны быть пустыми",
@@ -38,7 +49,8 @@ exports.registration = async (req, res) => {
     const tariffs = await Tariffs.findOne({ where: { name: "Базовый" } });
 
     const tokenEmail = crypto.randomBytes(64).toString("hex");
-    await main(email, tokenEmail);
+
+    // await main();
     const passwordHash = await bcrypt.hash(password, saltRounds);
     const user = await Users.create({
       email: email,
@@ -154,44 +166,51 @@ exports.checkSms = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
-  if (!email || !password) {
-    return res.status(400).send({
-      message: "Поля не должны быть пустыми",
+  try {
+    const email = req.body.email;
+    const password = req.body.password;
+    if (!email || !password) {
+      return res.status(400).send({
+        message: "Поля не должны быть пустыми",
+      });
+    }
+
+    const checkUser = await Users.findOne({
+      where: { email: email },
+      raw: true,
     });
-  }
 
-  const checkUser = await Users.findOne({ where: { email: email }, raw: true });
+    if (!checkUser) {
+      return res.status(400).send({ message: "Пользователя не существует" });
+    }
 
-  if (!checkUser) {
-    return res.status(400).send({ message: "Пользователя не существует" });
-  }
+    // if (!checkUser.verifiedEmail) {
+    //   return res.status(400).send({
+    //     message:
+    //       "Для авторизации необходимо подтвердить адресс электронной почты",
+    //   });
+    // }
 
-  if (!checkUser.verifiedEmail) {
-    return res.status(400).send({
-      message:
-        "Для авторизации необходимо подтвердить адресс электронной почты",
-    });
-  }
+    const passwordEqual = await bcrypt.compare(password, checkUser.password);
 
-  const passwordEqual = await bcrypt.compare(password, checkUser.password);
-
-  if (passwordEqual) {
-    const payload = { email: checkUser.email, id: checkUser.id };
-    const token = jwt.sign(payload, "secret", { expiresIn: 86200 });
-    res.send({
-      user: {
-        name: checkUser.name,
-        lastname: checkUser.lastname,
-        email: checkUser.email,
-        phone: checkUser.phone,
-        tariffs: checkUser.tariffs,
-      },
-      token,
-    });
-  } else {
-    res.status(400).send({ message: "Неправильный пароль" });
+    if (passwordEqual) {
+      const payload = { email: checkUser.email, id: checkUser.id };
+      const token = jwt.sign(payload, "secret", { expiresIn: 86200 });
+      res.send({
+        user: {
+          name: checkUser.name,
+          lastname: checkUser.lastname,
+          email: checkUser.email,
+          phone: checkUser.phone,
+          tariffs: checkUser.tariffs,
+        },
+        token,
+      });
+    } else {
+      res.status(400).send({ message: "Неправильный пароль" });
+    }
+  } catch (err) {
+    return res.send(err);
   }
 };
 
@@ -301,7 +320,7 @@ exports.addTariffsInTable = async (req, res) => {
     await Tariffs.create({ name: tariff, price: price });
     return res.json({ message: "Тариф успешно добавлен" });
   } catch (err) {
-    return res.json({ message: "Ошибка при добавлении тарифа" });
+    return res.json({ message: err });
   }
 };
 
@@ -333,7 +352,6 @@ exports.changeProfilDAta = async (req, res) => {
     const replaceToken = token.replace("Bearer", "").trimStart();
 
     const user = jwt.decode(replaceToken, "secret");
-    console.log(user);
 
     if (user.email === req.body.email) {
       await Users.update(
@@ -399,30 +417,6 @@ exports.getMe = async (req, res) => {
   } catch (err) {
     res.json({ message: err });
   }
-};
-
-exports.getMatch = async (req, res) => {
-  axios
-    .get(
-      "https://flashlive-sports.p.rapidapi.com/v1/events/list",
-
-      {
-        params: {
-          locale: "ru_RU",
-          sport_id: "1",
-          indent_days: "-7",
-          timezone: "-4",
-        },
-        headers: {
-          "X-RapidAPI-Key":
-            "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
-          "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
-        },
-      }
-    )
-    .then((res) => {
-      console.log(res);
-    });
 };
 
 exports.saveChangeOnAdmin = async (req, res) => {
@@ -507,4 +501,568 @@ exports.changePassword = async (req, res) => {
   );
 
   return res.send({ message: "Пароль успешно обновлен" });
+};
+
+///Матчи
+
+exports.getMatch = async (req, res) => {
+  try {
+    const response1 = await axios.get(
+      "https://flashlive-sports.p.rapidapi.com/v1/tournaments/list",
+      {
+        params: { sport_id: "1", locale: "ru_RU" },
+        headers: {
+          "accept-encoding": "*",
+          "X-RapidAPI-Key":
+            "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+          "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+        },
+      }
+    );
+
+    const response = await axios.get(
+      "https://flashlive-sports.p.rapidapi.com/v1/events/list",
+      {
+        params: {
+          locale: "ru_RU",
+          sport_id: "4",
+          indent_days: "1",
+          timezone: "3",
+        },
+        headers: {
+          "accept-encoding": "*",
+          "X-RapidAPI-Key":
+            "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+          "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+        },
+      }
+    );
+    const NHL = response.data.DATA.filter((item) => item.NAME === "США: НХЛ");
+
+    const filterLeag = response1.data.DATA.filter(
+      (item) =>
+        (item.LEAGUE_NAME === "Лига А") & (item.COUNTRY_NAME === "Австралия") ||
+        (item.LEAGUE_NAME === "Бундеслига") &
+          (item.COUNTRY_NAME === "Австрия") ||
+        (item.LEAGUE_NAME === "Вторая лига") &
+          (item.COUNTRY_NAME === "Австрия") ||
+        (item.LEAGUE_NAME === "Премьер-лига") &
+          (item.COUNTRY_NAME === "Англия") ||
+        (item.LEAGUE_NAME === "Чемпионшип") &
+          (item.COUNTRY_NAME === "Англия") ||
+        (item.LEAGUE_NAME === "Лига Професиональ") &
+          (item.COUNTRY_NAME === "Аргентина") ||
+        (item.LEAGUE_NAME === "Высшая лига") &
+          (item.COUNTRY_NAME === "Бельгия") ||
+        (item.LEAGUE_NAME === "Чемпионат Бразилии") &
+          (item.COUNTRY_NAME === "Бразилия") ||
+        (item.LEAGUE_NAME === "Чемпионат Бразилии В") &
+          (item.COUNTRY_NAME === "Бразилия") ||
+        (item.LEAGUE_NAME === "Бундеслига") &
+          (item.COUNTRY_NAME === "Германия") ||
+        (item.LEAGUE_NAME === "Вторая Бундеслига") &
+          (item.COUNTRY_NAME === "Германия") ||
+        (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Греция") ||
+        (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Дания") ||
+        (item.LEAGUE_NAME === "Примера") & (item.COUNTRY_NAME === "Испания") ||
+        (item.LEAGUE_NAME === "Сегунда") & (item.COUNTRY_NAME === "Испания") ||
+        (item.LEAGUE_NAME === "Серия А") & (item.COUNTRY_NAME === "Италия") ||
+        (item.LEAGUE_NAME === "Серия В") & (item.COUNTRY_NAME === "Италия") ||
+        (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Китай") ||
+        (item.LEAGUE_NAME === "Лига MX") & (item.COUNTRY_NAME === "Мексика") ||
+        (item.LEAGUE_NAME === "Высшая лига") &
+          (item.COUNTRY_NAME === "Нидерланды") ||
+        (item.LEAGUE_NAME === "Первый дивизион") &
+          (item.COUNTRY_NAME === "Нидерланды") ||
+        (item.LEAGUE_NAME === "Премьер-лига") &
+          (item.COUNTRY_NAME === "Польша") ||
+        (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Сербия") ||
+        (item.LEAGUE_NAME === "Первая лига") &
+          (item.COUNTRY_NAME === "Словакия") ||
+        (item.LEAGUE_NAME === "Первая лига") &
+          (item.COUNTRY_NAME === "Словения") ||
+        (item.LEAGUE_NAME === "МЛС") & (item.COUNTRY_NAME === "США") ||
+        (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Турция") ||
+        (item.LEAGUE_NAME === "Первая лига") &
+          (item.COUNTRY_NAME === "Франция") ||
+        (item.LEAGUE_NAME === "Вторая лига") &
+          (item.COUNTRY_NAME === "Франция") ||
+        (item.LEAGUE_NAME === "HNL") & (item.COUNTRY_NAME === "Хорватия") ||
+        (item.LEAGUE_NAME === "Первая лига") &
+          (item.COUNTRY_NAME === "Чехия") ||
+        (item.LEAGUE_NAME === "Второй дивизион") &
+          (item.COUNTRY_NAME === "Чехия") ||
+        (item.LEAGUE_NAME === "Суперлига") &
+          (item.COUNTRY_NAME === "Швейцария") ||
+        (item.LEAGUE_NAME === "Первая лига") &
+          (item.COUNTRY_NAME === "Швейцария") ||
+        (item.LEAGUE_NAME === "Высшая лига") &
+          (item.COUNTRY_NAME === "Швеция") ||
+        (item.LEAGUE_NAME === "Первая лига") &
+          (item.COUNTRY_NAME === "Швеция") ||
+        (item.LEAGUE_NAME === "Премьер-лига") &
+          (item.COUNTRY_NAME === "Шотландия") ||
+        (item.LEAGUE_NAME === "К-Лига 1") &
+          (item.COUNTRY_NAME === "Южная Корея") ||
+        (item.LEAGUE_NAME === "Лига Джей-1") &
+          (item.COUNTRY_NAME === "Япония") ||
+        (item.LEAGUE_NAME === "Высший дивизион") &
+          (item.COUNTRY_NAME === "Чили") ||
+        (item.LEAGUE_NAME === "Высшая лига") &
+          (item.COUNTRY_NAME === "Норвегия")
+    );
+
+    const allSports = NHL.concat(filterLeag);
+
+    await Leags.bulkCreate(allSports);
+
+    return res.send({ message: "Loaded" });
+  } catch (err) {}
+
+  // var config = {
+  //   method: 'get',
+  //   url: 'https://flashlive-sports.p.rapidapi.com/v1/events/h2h?locale=ru_RU&event_id=ANkQ5DxG',
+  //   headers: {
+  //     'accept-encoding': '*',
+  //     'X-RapidAPI-Key': '08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103',
+  //     'X-RapidAPI-Host': 'flashlive-sports.p.rapidapi.com',
+  //     ...data.getHeaders()
+  //   },
+  //   data: data
+  // };
+  // axios(config)
+  //   .then(function (response) {
+  //     res.send(JSON.stringify(response.data));
+  //   })
+  //   .catch(function (error) {
+  //     console.log(error);
+  //   })
+};
+
+exports.getMatchLeag = async (req, res) => {
+  try {
+    const leagList = await Leags.findAll();
+
+    const TEMPLATE_ID = leagList.map((item) => item.TEMPLATE_ID);
+    const response = await axios.get(
+      "https://flashlive-sports.p.rapidapi.com/v1/events/list",
+      {
+        params: {
+          locale: "ru_RU",
+          sport_id: "1",
+          timezone: "3",
+          indent_days: "0",
+        },
+        headers: {
+          "accept-encoding": "*",
+          "X-RapidAPI-Key":
+            "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+          "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+        },
+      }
+    );
+
+    const todayMatches = response.data.DATA.filter((item) =>
+      TEMPLATE_ID?.includes(item.TEMPLATE_ID)
+    );
+
+    const events = todayMatches.flatMap((item) => item.EVENTS);
+    const filterEvets = events.filter(
+      (item) => item.STAGE_TYPE === "SCHEDULED"
+    );
+
+    await MatchLeag.bulkCreate(todayMatches);
+    return res.send({ message: "Loaded" });
+  } catch (err) {}
+};
+
+exports.getMatchHockey = async (req, res) => {
+  try {
+    const leagList = await Leags.findOne({ where: { LEAGUE_NAME: "НХЛ" } });
+    const TEMPLATE_ID = leagList.TEMPLATE_ID;
+    const response = await axios.get(
+      "https://flashlive-sports.p.rapidapi.com/v1/events/list",
+      {
+        params: {
+          locale: "ru_RU",
+          sport_id: "4",
+          timezone: "3",
+          indent_days: "1",
+        },
+        headers: {
+          "accept-encoding": "*",
+          "X-RapidAPI-Key":
+            "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+          "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+        },
+      }
+    );
+
+    const leag = response.data.DATA.filter(
+      (item) => item.TEMPLATE_ID === TEMPLATE_ID
+    );
+
+    await MatchLeagHockey.bulkCreate(leag);
+
+    return res.send("Loaded");
+
+    // const events = todayMatches.flatMap((item) => item.EVENTS);
+    // const filterEvets = events.filter(
+    //   (item) => item.STAGE_TYPE === "SCHEDULED"
+    // );
+  } catch (err) {}
+};
+
+exports.getTodaMatch = async (req, res) => {
+  const matches = await MatchLeag.findAll();
+  const hockey = await MatchLeagHockey.findAll();
+  return res.send({ todayFootball: matches, todayHockey: hockey });
+};
+
+exports.getLeag = async (req, res) => {
+  const leag = await Leags.findAll();
+
+  return res.send(leag);
+};
+
+exports.getFilterMatch = async (req, res) => {
+  const id = req.query.id;
+  const todayMatch = await MatchLeag.findOne({ where: { TEMPLATE_ID: id } });
+
+  if (!todayMatch) {
+    return res.status(404).send({ message: "Сегодня нет матчей" });
+  }
+
+  const filterMatch = todayMatch.EVENTS.filter(
+    (item) => item.STAGE_TYPE === "SCHEDULED"
+  );
+  return res.send(filterMatch);
+};
+
+exports.getPrevMatch = async (req, res) => {
+  try {
+    const matches = await MatchLeag.findAll();
+    const eventId = matches.flatMap((item) =>
+      item.EVENTS.map((item) => item.EVENT_ID)
+    );
+    for (let i = 0; i < eventId.length; i++) {
+      const { data, status } = await axios.get(
+        "https://flashlive-sports.p.rapidapi.com/v1/events/h2h",
+        {
+          params: { event_id: eventId[i], locale: "ru_RU" },
+          headers: {
+            "accept-encoding": "*",
+            "X-RapidAPI-Key":
+              "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+            "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+          },
+        }
+      );
+
+      await PrevMatches.create({
+        EVENT_ID: eventId[i],
+        MATCHES_HOME: JSON.stringify(data.DATA[0].GROUPS[0].ITEMS),
+        MATCHES_AWAY: JSON.stringify(data.DATA[0].GROUPS[1].ITEMS),
+      });
+    }
+
+    return res.send({ message: "Loaded" });
+  } catch (err) {
+    return res.send({ err });
+  }
+};
+
+exports.getPrevMatchHockey = async (req, res) => {
+  try {
+    const matches = await MatchLeagHockey.findAll();
+    const eventId = matches.flatMap((item) =>
+      item.EVENTS.map((item) => item.EVENT_ID)
+    );
+    for (let i = 0; i < eventId.length; i++) {
+      const { data, status } = await axios.get(
+        "https://flashlive-sports.p.rapidapi.com/v1/events/h2h",
+        {
+          params: { event_id: eventId[i], locale: "ru_RU" },
+          headers: {
+            "accept-encoding": "*",
+            "X-RapidAPI-Key":
+              "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+            "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+          },
+        }
+      );
+
+      await PrevMatchHockey.create({
+        EVENT_ID: eventId[i],
+        MATCHES_HOME: JSON.stringify(data.DATA[0].GROUPS[0].ITEMS),
+        MATCHES_AWAY: JSON.stringify(data.DATA[0].GROUPS[1].ITEMS),
+      });
+    }
+
+    return res.send({ message: "Loaded" });
+  } catch (err) {
+    return res.send({ err });
+  }
+};
+
+exports.getStatsPrevMatchHockey = async (req, res) => {
+  const prevMatches = await PrevMatchHockey.findAll();
+  const parseDataHome = prevMatches.map((item) =>
+    JSON.parse(item.MATCHES_HOME)
+  );
+  const matchHome = parseDataHome;
+  const matchListHome = matchHome.flatMap((item) =>
+    item
+      .filter((item) => item.EVENT_NAME === "НХЛ" && item.STAGE != "AWARDED")
+      .slice(0, 6)
+  );
+  const filterID = matchListHome.filter(
+    (value, index, self) =>
+      index ===
+      self.findIndex(
+        (t) => t.EVENT_ID === value.EVENT_ID && t.EVENT_ID === value.EVENT_ID
+      )
+  );
+
+  for (let i = 0; i < filterID.length; i++) {
+    const { data } = await axios.get(
+      "https://flashlive-sports.p.rapidapi.com/v1/events/statistics",
+      {
+        params: { event_id: filterID[i].EVENT_ID, locale: "ru_RU" },
+        headers: {
+          "accept-encoding": "*",
+          "X-RapidAPI-Key":
+            "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+          "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+        },
+      }
+    );
+    await StatsHomeHockey.create({
+      EVENT_ID: filterID[i].EVENT_ID,
+      STATS: JSON.stringify(data.DATA),
+    });
+  }
+
+  return res.send({ message: "Loaded" });
+
+  return res.send(filterID);
+};
+
+exports.getStatsPrevMatchHockeyAway = async (req, res) => {
+  const prevMatches = await PrevMatchHockey.findAll();
+  const parseDataHome = prevMatches.map((item) =>
+    JSON.parse(item.MATCHES_AWAY)
+  );
+  const matchHome = parseDataHome;
+  const matchListHome = matchHome.flatMap((item) =>
+    item
+      .filter((item) => item.EVENT_NAME === "НХЛ" && item.STAGE != "AWARDED")
+      .slice(0, 6)
+  );
+  const filterID = matchListHome.filter(
+    (value, index, self) =>
+      index ===
+      self.findIndex(
+        (t) => t.EVENT_ID === value.EVENT_ID && t.EVENT_ID === value.EVENT_ID
+      )
+  );
+
+  for (let i = 0; i < filterID.length; i++) {
+    const { data } = await axios.get(
+      "https://flashlive-sports.p.rapidapi.com/v1/events/statistics",
+      {
+        params: { event_id: filterID[i].EVENT_ID, locale: "ru_RU" },
+        headers: {
+          "accept-encoding": "*",
+          "X-RapidAPI-Key":
+            "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+          "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+        },
+      }
+    );
+    await StatsAwayHockey.create({
+      EVENT_ID: filterID[i].EVENT_ID,
+      STATS: JSON.stringify(data.DATA),
+    });
+  }
+
+  return res.send({ message: "Loaded" });
+
+  return res.send(filterID);
+};
+
+exports.getStatsPrevMatch = async (req, res) => {
+  try {
+    const prevMatches = await PrevMatches.findAll();
+    const eventsId = prevMatches.map((item) => item.EVENT_ID);
+    const leagName = await Leags.findAll({ attributes: ["LEAGUE_NAME"] });
+    const leagFilter = leagName.map((item) => item.LEAGUE_NAME);
+    const parseDataHome = prevMatches.map((item) =>
+      JSON.parse(item.MATCHES_HOME)
+    );
+    const matchHome = parseDataHome;
+
+    const matchListHome = matchHome.flatMap((item) =>
+      item
+        .filter(
+          (item) =>
+            leagFilter?.includes(item.EVENT_NAME) && item.STAGE != "AWARDED"
+        )
+        .slice(0, 6)
+    );
+    const filterID = matchListHome.filter(
+      (value, index, self) =>
+        index ===
+        self.findIndex(
+          (t) => t.EVENT_ID === value.EVENT_ID && t.EVENT_ID === value.EVENT_ID
+        )
+    );
+
+    for (let i = 0; i < filterID.length; i++) {
+      const { data } = await axios.get(
+        "https://flashlive-sports.p.rapidapi.com/v1/events/statistics",
+        {
+          params: { event_id: filterID[i].EVENT_ID, locale: "ru_RU" },
+          headers: {
+            "accept-encoding": "*",
+            "X-RapidAPI-Key":
+              "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+            "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+          },
+        }
+      );
+      await StatsHome.create({
+        EVENT_ID: filterID[i].EVENT_ID,
+        STATS: JSON.stringify(data.DATA),
+      });
+    }
+
+    return res.send({ message: "Loaded" });
+  } catch (err) {
+    return res.send(err);
+  }
+};
+
+exports.getStatsPrevMatchAway = async (req, res) => {
+  try {
+    const prevMatches = await PrevMatches.findAll();
+    const eventsId = prevMatches.map((item) => item.EVENT_ID);
+    const leagName = await Leags.findAll({ attributes: ["LEAGUE_NAME"] });
+    const leagFilter = leagName.map((item) => item.LEAGUE_NAME);
+    const parseData = prevMatches.map((item) => JSON.parse(item.MATCHES_AWAY));
+    const match = parseData;
+
+    const matchList = match.flatMap((item) =>
+      item
+        .filter(
+          (item) =>
+            leagFilter?.includes(item.EVENT_NAME) && item.STAGE != "AWARDED"
+        )
+        .slice(0, 6)
+    );
+    const filterID = matchList.filter(
+      (value, index, self) =>
+        index ===
+        self.findIndex(
+          (t) => t.EVENT_ID === value.EVENT_ID && t.EVENT_ID === value.EVENT_ID
+        )
+    );
+
+    for (let i = 0; i < filterID.length; i++) {
+      const { data } = await axios.get(
+        "https://flashlive-sports.p.rapidapi.com/v1/events/statistics",
+        {
+          params: { event_id: filterID[i].EVENT_ID, locale: "ru_RU" },
+          headers: {
+            "accept-encoding": "*",
+            "X-RapidAPI-Key":
+              "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+            "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+          },
+        }
+      );
+      await StatsAway.create({
+        EVENT_ID: filterID[i].EVENT_ID,
+        STATS: JSON.stringify(data.DATA),
+      });
+    }
+
+    return res.send({ message: "Loaded" });
+  } catch (err) {
+    return res.send(err);
+  }
+};
+
+exports.getPrevsMatch = async (req, res) => {
+  try {
+    const eventid = req.query.event_id;
+    const leagList = await Leags.findAll();
+    const LEAGUE_NAME = leagList.map((item) => item.LEAGUE_NAME);
+    const prevMatch = await PrevMatches.findOne({
+      where: { EVENT_ID: eventid },
+    });
+    if (!prevMatch) {
+      const prevMatch = await PrewMatchHockey.findOne({
+        where: { EVENT_ID: eventid },
+      });
+      const matchesHome = JSON.parse(prevMatch.MATCHES_HOME);
+      const matchesAway = JSON.parse(prevMatch.MATCHES_AWAY);
+      return res.send({
+        matchHome: matchesHome.filter((item) =>
+          LEAGUE_NAME.includes(item.EVENT_NAME)
+        ),
+        matchesAway: matchesAway.filter((item) =>
+          LEAGUE_NAME.includes(item.EVENT_NAME)
+        ),
+      });
+    }
+
+    const matchesHome = JSON.parse(prevMatch.MATCHES_HOME);
+    const matchesAway = JSON.parse(prevMatch.MATCHES_AWAY);
+    return res.send({
+      matchHome: matchesHome.filter((item) =>
+        LEAGUE_NAME.includes(item.EVENT_NAME)
+      ),
+      matchesAway: matchesAway.filter((item) =>
+        LEAGUE_NAME.includes(item.EVENT_NAME)
+      ),
+    });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+exports.stats = async (req, res) => {
+  try {
+    const id = req.body.id;
+    const stats = await StatsHome.findAll({ where: { EVENT_ID: id } });
+
+    if (stats.length === 0) {
+      const stats = await StatsHomeHockey.findAll({ where: { EVENT_ID: id } });
+      return res.send(stats.map((item) => JSON.parse(item.STATS)));
+    }
+
+    return res.send(stats.map((item) => JSON.parse(item.STATS)));
+
+    //OOAz88ZA
+  } catch (err) {
+    return res.send(err);
+  }
+};
+
+exports.StatsAway = async (req, res) => {
+  try {
+    const id = req.body.id;
+    const stats = await StatsAway.findAll({ where: { EVENT_ID: id } });
+    if (stats.length === 0) {
+      const stats = await StatsAwayHockey.findAll({ where: { EVENT_ID: id } });
+      return res.send(stats.map((item) => JSON.parse(item.STATS)));
+    }
+
+    return res.send(stats.map((item) => JSON.parse(item.STATS)));
+
+    //OOAz88ZA
+  } catch (err) {
+    return res.send(err);
+  }
 };

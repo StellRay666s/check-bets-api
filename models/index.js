@@ -20,6 +20,15 @@ db.Tariffs = require("./tarifs.model")(sequelize, Sequelize);
 db.userTariffs = require("./userTariffs.modle")(sequelize, Sequelize);
 db.Smscode = require("./smscode.model.js")(sequelize, Sequelize);
 db.SmscodeUser = require("./smscodeUser.model.js")(sequelize, Sequelize);
+db.Leags = require("./leags.model.js")(sequelize, Sequelize);
+db.MatchLeag = require("./todayMatches.model")(sequelize, Sequelize);
+db.MatchHockey = require('./todayHockey.model')(sequelize, Sequelize);
+db.PrevMatches = require("./prevMatch.model")(sequelize, Sequelize);
+db.StatsHome = require("./statsHome.model")(sequelize, Sequelize);
+db.StatsAway = require("./statsAway.model.")(sequelize, Sequelize);
+db.StatsAwayHockey = require('./statsAwayHockey.model')(sequelize, Sequelize);
+db.StatsHomeHockey = require('./statsHomeHockey.model')(sequelize, Sequelize);
+db.PrevMatchHockey = require('./prevMatchHockey.model')(sequelize, Sequelize);
 
 db.Users.belongsToMany(db.Roles, { through: db.UserRoles });
 db.Roles.belongsToMany(db.Users, { through: db.UserRoles });
@@ -29,5 +38,7 @@ db.Tariffs.belongsToMany(db.Users, { through: db.userTariffs });
 
 db.Smscode.belongsToMany(db.Users, { through: db.SmscodeUser });
 db.Users.belongsToMany(db.Smscode, { through: db.SmscodeUser });
+
+
 
 module.exports = db;
