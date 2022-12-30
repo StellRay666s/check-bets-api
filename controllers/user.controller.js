@@ -18,6 +18,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 var FormData = require("form-data");
 var data = new FormData();
+const sequelize = require('sequelize')
 
 const { main, smsCodeSend } = require("../utils/mailer");
 const { mainChancgePassword } = require("../utils/mailChangePassword");
@@ -55,7 +56,7 @@ exports.registration = async (req, res) => {
     const user = await Users.create({
       email: email,
       password: passwordHash,
-      hash: tokenEmail,
+      // hash: tokenEmail,
     });
 
     if (user) {
@@ -306,7 +307,7 @@ exports.addRoleUser = async (req, res) => {
     await user.addRoles(findRole);
 
     return res.send({ message: "Роль добавлена" });
-  } catch (err) {}
+  } catch (err) { }
 };
 
 exports.addTariffsInTable = async (req, res) => {
@@ -340,7 +341,7 @@ exports.addTarifsUser = async (req, res) => {
     await user.addTariffs(findTariff);
 
     return res.send({ message: "Тариф добавлен" });
-  } catch (err) {}
+  } catch (err) { }
 };
 
 exports.changeProfilDAta = async (req, res) => {
@@ -543,25 +544,25 @@ exports.getMatch = async (req, res) => {
       (item) =>
         (item.LEAGUE_NAME === "Лига А") & (item.COUNTRY_NAME === "Австралия") ||
         (item.LEAGUE_NAME === "Бундеслига") &
-          (item.COUNTRY_NAME === "Австрия") ||
+        (item.COUNTRY_NAME === "Австрия") ||
         (item.LEAGUE_NAME === "Вторая лига") &
-          (item.COUNTRY_NAME === "Австрия") ||
+        (item.COUNTRY_NAME === "Австрия") ||
         (item.LEAGUE_NAME === "Премьер-лига") &
-          (item.COUNTRY_NAME === "Англия") ||
+        (item.COUNTRY_NAME === "Англия") ||
         (item.LEAGUE_NAME === "Чемпионшип") &
-          (item.COUNTRY_NAME === "Англия") ||
+        (item.COUNTRY_NAME === "Англия") ||
         (item.LEAGUE_NAME === "Лига Професиональ") &
-          (item.COUNTRY_NAME === "Аргентина") ||
+        (item.COUNTRY_NAME === "Аргентина") ||
         (item.LEAGUE_NAME === "Высшая лига") &
-          (item.COUNTRY_NAME === "Бельгия") ||
+        (item.COUNTRY_NAME === "Бельгия") ||
         (item.LEAGUE_NAME === "Чемпионат Бразилии") &
-          (item.COUNTRY_NAME === "Бразилия") ||
+        (item.COUNTRY_NAME === "Бразилия") ||
         (item.LEAGUE_NAME === "Чемпионат Бразилии В") &
-          (item.COUNTRY_NAME === "Бразилия") ||
+        (item.COUNTRY_NAME === "Бразилия") ||
         (item.LEAGUE_NAME === "Бундеслига") &
-          (item.COUNTRY_NAME === "Германия") ||
+        (item.COUNTRY_NAME === "Германия") ||
         (item.LEAGUE_NAME === "Вторая Бундеслига") &
-          (item.COUNTRY_NAME === "Германия") ||
+        (item.COUNTRY_NAME === "Германия") ||
         (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Греция") ||
         (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Дания") ||
         (item.LEAGUE_NAME === "Примера") & (item.COUNTRY_NAME === "Испания") ||
@@ -571,45 +572,45 @@ exports.getMatch = async (req, res) => {
         (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Китай") ||
         (item.LEAGUE_NAME === "Лига MX") & (item.COUNTRY_NAME === "Мексика") ||
         (item.LEAGUE_NAME === "Высшая лига") &
-          (item.COUNTRY_NAME === "Нидерланды") ||
+        (item.COUNTRY_NAME === "Нидерланды") ||
         (item.LEAGUE_NAME === "Первый дивизион") &
-          (item.COUNTRY_NAME === "Нидерланды") ||
+        (item.COUNTRY_NAME === "Нидерланды") ||
         (item.LEAGUE_NAME === "Премьер-лига") &
-          (item.COUNTRY_NAME === "Польша") ||
+        (item.COUNTRY_NAME === "Польша") ||
         (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Сербия") ||
         (item.LEAGUE_NAME === "Первая лига") &
-          (item.COUNTRY_NAME === "Словакия") ||
+        (item.COUNTRY_NAME === "Словакия") ||
         (item.LEAGUE_NAME === "Первая лига") &
-          (item.COUNTRY_NAME === "Словения") ||
+        (item.COUNTRY_NAME === "Словения") ||
         (item.LEAGUE_NAME === "МЛС") & (item.COUNTRY_NAME === "США") ||
         (item.LEAGUE_NAME === "Суперлига") & (item.COUNTRY_NAME === "Турция") ||
         (item.LEAGUE_NAME === "Первая лига") &
-          (item.COUNTRY_NAME === "Франция") ||
+        (item.COUNTRY_NAME === "Франция") ||
         (item.LEAGUE_NAME === "Вторая лига") &
-          (item.COUNTRY_NAME === "Франция") ||
+        (item.COUNTRY_NAME === "Франция") ||
         (item.LEAGUE_NAME === "HNL") & (item.COUNTRY_NAME === "Хорватия") ||
         (item.LEAGUE_NAME === "Первая лига") &
-          (item.COUNTRY_NAME === "Чехия") ||
+        (item.COUNTRY_NAME === "Чехия") ||
         (item.LEAGUE_NAME === "Второй дивизион") &
-          (item.COUNTRY_NAME === "Чехия") ||
+        (item.COUNTRY_NAME === "Чехия") ||
         (item.LEAGUE_NAME === "Суперлига") &
-          (item.COUNTRY_NAME === "Швейцария") ||
+        (item.COUNTRY_NAME === "Швейцария") ||
         (item.LEAGUE_NAME === "Первая лига") &
-          (item.COUNTRY_NAME === "Швейцария") ||
+        (item.COUNTRY_NAME === "Швейцария") ||
         (item.LEAGUE_NAME === "Высшая лига") &
-          (item.COUNTRY_NAME === "Швеция") ||
+        (item.COUNTRY_NAME === "Швеция") ||
         (item.LEAGUE_NAME === "Первая лига") &
-          (item.COUNTRY_NAME === "Швеция") ||
+        (item.COUNTRY_NAME === "Швеция") ||
         (item.LEAGUE_NAME === "Премьер-лига") &
-          (item.COUNTRY_NAME === "Шотландия") ||
+        (item.COUNTRY_NAME === "Шотландия") ||
         (item.LEAGUE_NAME === "К-Лига 1") &
-          (item.COUNTRY_NAME === "Южная Корея") ||
+        (item.COUNTRY_NAME === "Южная Корея") ||
         (item.LEAGUE_NAME === "Лига Джей-1") &
-          (item.COUNTRY_NAME === "Япония") ||
+        (item.COUNTRY_NAME === "Япония") ||
         (item.LEAGUE_NAME === "Высший дивизион") &
-          (item.COUNTRY_NAME === "Чили") ||
+        (item.COUNTRY_NAME === "Чили") ||
         (item.LEAGUE_NAME === "Высшая лига") &
-          (item.COUNTRY_NAME === "Норвегия")
+        (item.COUNTRY_NAME === "Норвегия")
     );
 
     const allSports = NHL.concat(filterLeag);
@@ -617,7 +618,7 @@ exports.getMatch = async (req, res) => {
     await Leags.bulkCreate(allSports);
 
     return res.send({ message: "Loaded" });
-  } catch (err) {}
+  } catch (err) { }
 
   // var config = {
   //   method: 'get',
@@ -673,7 +674,7 @@ exports.getMatchLeag = async (req, res) => {
 
     await MatchLeag.bulkCreate(todayMatches);
     return res.send({ message: "Loaded" });
-  } catch (err) {}
+  } catch (err) { }
 };
 
 exports.getMatchHockey = async (req, res) => {
@@ -710,7 +711,7 @@ exports.getMatchHockey = async (req, res) => {
     // const filterEvets = events.filter(
     //   (item) => item.STAGE_TYPE === "SCHEDULED"
     // );
-  } catch (err) {}
+  } catch (err) { }
 };
 
 exports.getTodaMatch = async (req, res) => {

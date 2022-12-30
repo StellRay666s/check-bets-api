@@ -8,7 +8,9 @@
 # testing
 /coverage
 
+.lock
 
+/config
 
 # production
 /build
