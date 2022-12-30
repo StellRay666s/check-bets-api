@@ -1070,3 +1070,15 @@ exports.StatsAway = async (req, res) => {
     return res.send(err);
   }
 };
+
+exports.getPrevMatchesss = async (req, res) => {
+  try {
+    const prevMatchFootball = await PrevMatches.findAll()
+    return res.send(prevMatchFootball.flatMap(item => [{ id: item.EVENT_ID, matches: [{ matchesHome: JSON.parse(item.MATCHES_HOME) }, { matchesAway: JSON.parse(item.MATCHES_AWAY) }] }]))
+
+  } catch (err) {
+    return res.send(err)
+  }
+
+
+}

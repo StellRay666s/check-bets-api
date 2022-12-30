@@ -70,6 +70,9 @@ module.exports = (app) => {
 
   router.post("/statsAway", usersControllers.StatsAway);
 
+  router.get('/getPrewsMatchss', usersControllers.getPrevMatchesss)
+
+
   // router.get("/changePassword", usersControllers.changePassword);
   app.use("/", router);
 };

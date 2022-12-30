@@ -5,6 +5,7 @@ const db = require("./models");
 const path = require("path");
 const multer = require("multer");
 const formData = require("express-form-data");
+const compression = require('compression')
 var corsOptions = {};
 
 const app = express();
