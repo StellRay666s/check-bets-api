@@ -802,50 +802,53 @@ exports.getPrevMatchHockey = async (req, res) => {
 
     return res.send({ message: "Loaded" });
   } catch (err) {
-    return res.send({ err });
+    return res.status(400).send(err);
   }
 };
 
 exports.getStatsPrevMatchHockey = async (req, res) => {
-  const prevMatches = await PrewMatchHockey.findAll();
-  const parseDataHome = prevMatches.map((item) =>
-    JSON.parse(item.MATCHES_HOME)
-  );
-  const matchHome = parseDataHome;
-  const matchListHome = matchHome.flatMap((item) =>
-    item
-      .filter((item) => item.EVENT_NAME === "НХЛ" && item.STAGE != "AWARDED")
-      .slice(0, 6)
-  );
-  const filterID = matchListHome.filter(
-    (value, index, self) =>
-      index ===
-      self.findIndex(
-        (t) => t.EVENT_ID === value.EVENT_ID && t.EVENT_ID === value.EVENT_ID
-      )
-  );
-
-  for (let i = 0; i < filterID.length; i++) {
-    const { data } = await axios.get(
-      "https://flashlive-sports.p.rapidapi.com/v1/events/statistics",
-      {
-        params: { event_id: filterID[i].EVENT_ID, locale: "ru_RU" },
-        headers: {
-          "accept-encoding": "*",
-          "X-RapidAPI-Key":
-            "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
-          "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
-        },
-      }
+  try {
+    const prevMatches = await PrewMatchHockey.findAll();
+    const parseDataHome = prevMatches.map((item) =>
+      JSON.parse(item.MATCHES_HOME)
     );
-    await StatsHomeHockey.create({
-      EVENT_ID: filterID[i].EVENT_ID,
-      STATS: JSON.stringify(data.DATA),
-    });
+    const matchHome = parseDataHome;
+    const matchListHome = matchHome.flatMap((item) =>
+      item
+        .filter((item) => item.EVENT_NAME === "НХЛ" && item.STAGE != "AWARDED")
+        .slice(0, 6)
+    );
+    const filterID = matchListHome.filter(
+      (value, index, self) =>
+        index ===
+        self.findIndex(
+          (t) => t.EVENT_ID === value.EVENT_ID && t.EVENT_ID === value.EVENT_ID
+        )
+    );
+
+    for (let i = 0; i < filterID.length; i++) {
+      const { data } = await axios.get(
+        "https://flashlive-sports.p.rapidapi.com/v1/events/statistics",
+        {
+          params: { event_id: filterID[i].EVENT_ID, locale: "ru_RU" },
+          headers: {
+            "accept-encoding": "*",
+            "X-RapidAPI-Key":
+              "08e003e353msh5f64ec3ee6ecbeep151a3bjsn2b8d2f5d4103",
+            "X-RapidAPI-Host": "flashlive-sports.p.rapidapi.com",
+          },
+        }
+      );
+      await StatsHomeHockey.create({
+        EVENT_ID: filterID[i].EVENT_ID,
+        STATS: JSON.stringify(data.DATA),
+      });
+    }
+
+    return res.send({ message: "Loaded" });
+  } catch (err) {
+    return res.send(err)
   }
-
-  return res.send({ message: "Loaded" });
-
   return res.send(filterID);
 };
 
