@@ -807,7 +807,7 @@ exports.getPrevMatchHockey = async (req, res) => {
 };
 
 exports.getStatsPrevMatchHockey = async (req, res) => {
-  const prevMatches = await PrevMatchHockey.findAll();
+  const prevMatches = await PrewMatchHockey.findAll();
   const parseDataHome = prevMatches.map((item) =>
     JSON.parse(item.MATCHES_HOME)
   );
