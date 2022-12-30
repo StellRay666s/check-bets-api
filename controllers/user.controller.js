@@ -793,7 +793,7 @@ exports.getPrevMatchHockey = async (req, res) => {
         }
       );
 
-      await PrevMatchHockey.create({
+      await PrewMatchHockey.create({
         EVENT_ID: eventId[i],
         MATCHES_HOME: JSON.stringify(data.DATA[0].GROUPS[0].ITEMS),
         MATCHES_AWAY: JSON.stringify(data.DATA[0].GROUPS[1].ITEMS),
