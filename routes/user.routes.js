@@ -72,6 +72,9 @@ module.exports = (app) => {
 
   router.get('/getPrewsMatchss', usersControllers.getPrevMatchesss)
 
+  router.post('/postPay', usersControllers.postPay)
+
+  router.post('/cancelPay', usersControllers.cancelPay)
 
   // router.get("/changePassword", usersControllers.changePassword);
   app.use("/", router);

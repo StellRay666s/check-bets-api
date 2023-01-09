@@ -1082,3 +1082,42 @@ exports.getPrevMatchesss = async (req, res) => {
 
 
 }
+
+
+let token = []
+
+exports.postPay = async (req, res) => {
+  const response = await axios.post('https://securepay.tinkoff.ru/v2/Init', {
+    TerminalKey: '1672048579840DEMO',
+    Amount: 200,
+    OrderId: 5
+  }, {
+    headers: {
+      "accept-encoding": "*",
+    },
+
+  })
+
+
+
+  return res.send(response.data((item, index) => item))
+
+
+
+}
+
+exports.cancelPay = async (req, res) => {
+  const response = await axios.post('https://securepay.tinkoff.ru/v2/Cancel', {
+    TerminalKey: '1672048579840DEMO',
+    PaymentId
+      :
+      "2206006811"
+  }, {
+    headers: {
+      "accept-encoding": "*",
+    },
+
+  }
+  )
+  return res.send(response.data)
+}
