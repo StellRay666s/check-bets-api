@@ -6,9 +6,22 @@ const path = require("path");
 const multer = require("multer");
 const formData = require("express-form-data");
 const compression = require('compression')
+const cron = require('node-cron')
 var corsOptions = {};
+const { checkTimeSubscribe } = require('./utils/chekSubscribe')
+
 
 const app = express();
+
+// cron.schedule('*/1 * * * * *', function () {
+//   checkTimeSubscribe()
+
+// })
+
+cron.schedule('*/1 * * * *', function () {
+  console.log(1)
+
+})
 
 // Без формдаты никуда ))
 // app.use(formData.parse());

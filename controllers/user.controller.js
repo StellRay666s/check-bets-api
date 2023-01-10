@@ -19,6 +19,8 @@ const jwt = require("jsonwebtoken");
 var FormData = require("form-data");
 var data = new FormData();
 const sequelize = require('sequelize')
+const cron = require('node-cron')
+const moment = require('moment')
 
 const { main, smsCodeSend } = require("../utils/mailer");
 const { mainChancgePassword } = require("../utils/mailChangePassword");
@@ -462,17 +464,28 @@ exports.buyTariffs = async (req, res) => {
     return res.send({ message: "Тариф не найден" });
   }
 
-  await Users.update(
-    {
-      tariffs: sequelize.fn(
-        "array_append",
-        sequelize.col("tariffs"),
-        tariffs.name
-      ),
-    },
-    { where: { id: decode.id } }
-  );
-  return res.send({ message: "Тариф приобретен" });
+  // const user = await Users.update(
+  //     {
+  //       tariffs: sequelize.fn(
+  //         "array_append",
+  //         sequelize.col("tariffs"),
+  //         tariffs.name
+  //       ),
+  //     },
+  //     { where: { id: decode.id } }
+  //   );
+
+  const user = await Users.findOne({ where: { id: decode.id } })
+
+
+  const date = new Date()
+  const mom = moment(date)
+  const addMonth = mom.add(2, 'minutes')
+
+  await user.addTariffs(tariffs, { through: { tariffsFinish: addMonth } })
+
+  return res.send(addMonth);
+
 };
 
 exports.changePassword = async (req, res) => {
@@ -1083,41 +1096,3 @@ exports.getPrevMatchesss = async (req, res) => {
 
 }
 
-
-let token = []
-
-exports.postPay = async (req, res) => {
-  const response = await axios.post('https://securepay.tinkoff.ru/v2/Init', {
-    TerminalKey: '1672048579840DEMO',
-    Amount: 200,
-    OrderId: 5
-  }, {
-    headers: {
-      "accept-encoding": "*",
-    },
-
-  })
-
-
-
-  return res.send(response.data((item, index) => item))
-
-
-
-}
-
-exports.cancelPay = async (req, res) => {
-  const response = await axios.post('https://securepay.tinkoff.ru/v2/Cancel', {
-    TerminalKey: '1672048579840DEMO',
-    PaymentId
-      :
-      "2206006811"
-  }, {
-    headers: {
-      "accept-encoding": "*",
-    },
-
-  }
-  )
-  return res.send(response.data)
-}
