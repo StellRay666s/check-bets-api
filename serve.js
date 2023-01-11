@@ -18,10 +18,10 @@ const app = express();
 
 // })
 
-cron.schedule('*/1 * * * *', function () {
-  console.log(1)
+// cron.schedule('*/1 * * * *', function () {
+//   console.log(1)
 
-})
+// })
 
 // Без формдаты никуда ))
 // app.use(formData.parse());

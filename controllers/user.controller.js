@@ -21,13 +21,47 @@ var data = new FormData();
 const sequelize = require('sequelize')
 const cron = require('node-cron')
 const moment = require('moment')
+// const smsAero = require('smsaero-nodejs');
 
 const { main, smsCodeSend } = require("../utils/mailer");
 const { mainChancgePassword } = require("../utils/mailChangePassword");
 const crypto = require("crypto");
 const axios = require("axios");
 
+
 const saltRounds = 12;
+
+var base64encodedData = Buffer.from('pepa1996@inbox.ru' + ':' + 'ldYYDLjp4wlhARdSMvj5xnpuPxWp').toString('base64');
+exports.sendSms = async (req, res) => {
+
+  const response = await axios.get('https://gate.smsaero.ru/v2/auth',
+    {
+      header: {
+        Authorization: 'Basic ' + base64encodedData
+      }
+    }
+  )
+
+  return res.send(response.headers)
+
+  // const config = {
+  //   method: 'get',
+  //   url: 'gate.smsaero.ru/v2/auth'
+
+  // };
+
+  // axios(config)
+  //   .then(function (response) {
+  //     console.log(JSON.stringify(response.data));
+  //   })
+  //   .catch(function (error) {
+  //     console.log(error);
+  //   });
+
+
+}
+
+
 
 exports.registration = async (req, res) => {
   try {
@@ -62,7 +96,7 @@ exports.registration = async (req, res) => {
     });
 
     if (user) {
-      Users.update(
+      await Users.update(
         {
           tariffs: sequelize.fn(
             "array_append",
@@ -106,10 +140,24 @@ exports.registrationPhone = async (req, res) => {
     if (checkUser) {
       checkUser.addSmscode(smsCode);
     } else {
+      const tariffs = await Tariffs.findOne({ where: { name: "Базовый" } });
       const role = await Roles.findOne({ where: { name: "Пользователь" } });
       const user = await Users.create({
         phone: phone,
+
       });
+
+      if (user) {
+        Users.update({
+          tariffs: sequelize.fn(
+            "array_append",
+            sequelize.col("tariffs"),
+            tariffs.name
+          ),
+        }, { where: { phone: phone } })
+
+      }
+
       await user.addRoles(role);
       await user.addSmscode(smsCode);
     }

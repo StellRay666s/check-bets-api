@@ -1,6 +1,7 @@
 module.exports = (app) => {
   const usersControllers = require("../controllers/user.controller");
-
+  const { checkExistingUserPhone } = require('../utils/checkExistingUser')
+  const { checkToken } = require('../utils/checkToken')
   var router = require("express").Router();
   const bodyParser = require("body-parser");
   const json = bodyParser.json();
@@ -15,7 +16,9 @@ module.exports = (app) => {
 
   router.post("/login", usersControllers.login);
 
-  router.get("/getMe", usersControllers.getMe);
+  router.post('/send', usersControllers.sendSms)
+
+  router.get("/getMe", checkToken, usersControllers.getMe);
 
   router.get("/getUser", usersControllers.getUser);
 
